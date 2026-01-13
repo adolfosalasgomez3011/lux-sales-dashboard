@@ -15,6 +15,44 @@ EXCEL_PATH = r"G:\My Drive\NewLux\KPIs_Accounting\Gastos_Semanal_Template_V2.xls
 # Check if we're in cloud environment
 IS_CLOUD = not os.path.exists(EXCEL_PATH)
 
+def read_gastos_from_uploaded_file(uploaded_file):
+    """
+    Read expense data from uploaded Excel file (Streamlit UploadedFile object)
+    
+    Args:
+        uploaded_file: Streamlit UploadedFile object
+    
+    Returns:
+        pandas.DataFrame with expense data
+    """
+    try:
+        # Read directly from uploaded file
+        df = pd.read_excel(uploaded_file, sheet_name="Gastos")
+        
+        # Check if required columns exist
+        required_cols = ['Fecha', 'Semana', 'Tipo_Gasto', 'Categoría', 'Tipo_Negocio', 
+                        'Descripción', 'Monto_Soles', 'Venta_ID']
+        
+        if not all(col in df.columns for col in required_cols):
+            print(f"Warning: Excel file missing required columns")
+            return pd.DataFrame()
+        
+        # Filter out empty rows (where Fecha is null)
+        df = df[df['Fecha'].notna()].copy()
+        
+        # Convert Fecha to datetime if it's not already
+        if not df.empty:
+            df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+            # Remove rows where date conversion failed
+            df = df[df['Fecha'].notna()]
+        
+        return df
+        
+    except Exception as e:
+        print(f"Error reading uploaded Excel: {str(e)}")
+        return pd.DataFrame()
+
+
 def read_gastos_excel(file_path=EXCEL_PATH):
     """
     Read expense data from Excel file

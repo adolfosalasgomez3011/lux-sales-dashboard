@@ -20,7 +20,8 @@ from database import (
 )
 from excel_reader import (
     read_gastos_excel, get_gastos_by_period, get_gastos_by_week,
-    get_gastos_by_venta_id, get_costos_summary, IS_CLOUD
+    get_gastos_by_venta_id, get_costos_summary, IS_CLOUD,
+    read_gastos_from_uploaded_file
 )
 
 # Page config
@@ -466,7 +467,20 @@ elif st.session_state['page'] == "📋 Ver Registros":
         
         # Show cloud warning if applicable
         if IS_CLOUD:
-            st.warning("⚠️ **Modo Cloud**: El archivo Excel en Google Drive no está accesible desde la nube. Ver DEPLOYMENT.md para opciones.")
+            st.warning("⚠️ **Modo Cloud**: El archivo Excel en Google Drive no está accesible desde la nube.")
+            
+            # File uploader
+            st.markdown("#### 📤 Subir Archivo Excel")
+            uploaded_file = st.file_uploader(
+                "Sube el archivo `Gastos_Semanal_Template_V2.xlsx` aquí:",
+                type=['xlsx', 'xls'],
+                help="El contador debe subir el archivo Excel con los gastos registrados"
+            )
+            
+            if uploaded_file is not None:
+                # Store in session state
+                st.session_state['uploaded_gastos'] = uploaded_file
+                st.success("✅ Archivo cargado exitosamente!")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -485,8 +499,19 @@ elif st.session_state['page'] == "📋 Ver Registros":
             end_date = today
         
         # Read expenses from Excel
+        gastos_df = pd.DataFrame()
+        
         try:
-            gastos_df = get_gastos_by_period(start_date, end_date)
+            if IS_CLOUD and 'uploaded_gastos' in st.session_state:
+                # Read from uploaded file
+                gastos_df = read_gastos_from_uploaded_file(st.session_state['uploaded_gastos'])
+                # Filter by period
+                if not gastos_df.empty:
+                    mask = (gastos_df['Fecha'].dt.date >= start_date) & (gastos_df['Fecha'].dt.date <= end_date)
+                    gastos_df = gastos_df[mask]
+            else:
+                # Read from local file
+                gastos_df = get_gastos_by_period(start_date, end_date)
         except Exception as e:
             st.error(f"❌ Error al leer archivo Excel: {str(e)}")
             gastos_df = pd.DataFrame()

@@ -14,7 +14,7 @@ import sys
 sys.path.append(str(Path(__file__).parent))
 
 from database import (
-    init_database, create_visita, create_oportunidad, create_venta,
+    init_database, create_visita, update_visita, delete_visita, create_oportunidad, create_venta,
     get_visitas_by_period, get_oportunidades_activas, get_ventas_by_period,
     generate_venta_id, get_week_number
 )
@@ -116,49 +116,57 @@ if st.session_state['page'] == "🏠 Inicio":
             st.rerun()
 
 
+
 # ============= PAGE: REGISTRAR VISITA =============
 elif st.session_state['page'] == "📝 Registrar Visita":
-    st.title("📝 Registrar Nueva Visita")
-    
+    # Check if editing an existing visit
+    editing_visita = st.session_state.get('visita_to_edit', None)
+    st.title("📝 " + ("Editar Visita" if editing_visita else "Registrar Nueva Visita"))
+
     with st.form("form_visita"):
         st.markdown("### Datos del Negocio")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
-            nombre = st.text_input("Nombre del Negocio *", placeholder="Ej: Taller El Rayo")
-            tipo_negocio = st.selectbox("Tipo de Negocio *", TIPOS_NEGOCIO)
-        
+            nombre = st.text_input("Nombre del Negocio *", value=editing_visita['nombre'] if editing_visita else "", placeholder="Ej: Taller El Rayo")
+            tipo_negocio = st.selectbox("Tipo de Negocio *", TIPOS_NEGOCIO, index=TIPOS_NEGOCIO.index(editing_visita['tipo_negocio']) if editing_visita else 0)
+
         with col2:
-            fecha = st.date_input("Fecha de Visita *", value=date.today())
+            fecha = st.date_input("Fecha de Visita *", value=editing_visita['fecha'] if editing_visita else date.today())
             semana = get_week_number(fecha)
             st.text_input("Semana", value=semana, disabled=True)
-        
-        direccion = st.text_area("Dirección *", placeholder="Ej: Av. Arriola 234, Urb. Industrial, La Victoria", height=100)
-        
-        notas = st.text_area("Notas / Observaciones", placeholder="Ej: Hablé con el dueño, mostró interés en JS02Y, tiene 150m²", height=100)
-        
+
+        direccion = st.text_area("Dirección *", value=editing_visita['direccion'] if editing_visita else "", placeholder="Ej: Av. Arriola 234, Urb. Industrial, La Victoria", height=100)
+
+        notas = st.text_area("Notas / Observaciones", value=editing_visita['notas'] if editing_visita and editing_visita['notas'] else "", placeholder="Ej: Hablé con el dueño, mostró interés en JS02Y, tiene 150m²", height=100)
+
         submitted = st.form_submit_button("💾 Guardar Visita", use_container_width=True)
-        
+
         if submitted:
             if nombre and tipo_negocio and direccion:
                 try:
-                    visita_id = create_visita(nombre, tipo_negocio, direccion, fecha, semana, notas)
-                    st.success(f"✅ Visita registrada exitosamente! ID: {visita_id}")
+                    if editing_visita:
+                        update_visita(editing_visita['id'], nombre, tipo_negocio, direccion, fecha, semana, notas)
+                        st.success(f"✅ Visita actualizada exitosamente! ID: {editing_visita['id']}")
+                        del st.session_state['visita_to_edit']
+                    else:
+                        visita_id = create_visita(nombre, tipo_negocio, direccion, fecha, semana, notas)
+                        st.success(f"✅ Visita registrada exitosamente! ID: {visita_id}")
                     st.balloons()
                 except Exception as e:
                     st.error(f"❌ Error al guardar: {str(e)}")
             else:
                 st.error("⚠️ Por favor complete todos los campos obligatorios (*)")
-    
+
     # Show recent visits
     st.markdown("---")
     st.markdown("### 📋 Visitas Recientes (Esta Semana)")
-    
+
     today = date.today()
     week_start = today - timedelta(days=today.weekday())
     visitas = get_visitas_by_period(week_start, today)
-    
+
     if visitas:
         for visita in visitas[:5]:  # Show last 5
             with st.expander(f"📅 {visita['fecha']} | {visita['nombre']} ({visita['tipo_negocio']})"):
@@ -166,10 +174,41 @@ elif st.session_state['page'] == "📝 Registrar Visita":
                 st.write(f"**Semana:** {visita['semana']}")
                 if visita['notas']:
                     st.write(f"**Notas:** {visita['notas']}")
-                
-                if st.button("🎯 Convertir a Oportunidad", key=f"conv_{visita['id']}"):
-                    st.session_state['visita_to_convert'] = visita
-                    st.session_state['page'] = "🎯 Registrar Oportunidad"
+
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button("✏️ Editar Visita", key=f"edit_{visita['id']}"):
+                        st.session_state['visita_to_edit'] = visita
+                        st.session_state['page'] = "📝 Registrar Visita"
+                        st.rerun()
+                with col2:
+                    if st.button("🎯 Convertir a Oportunidad", key=f"conv_{visita['id']}"):
+                        st.session_state['visita_to_convert'] = visita
+                        st.session_state['page'] = "🎯 Registrar Oportunidad"
+                        st.rerun()
+                with col3:
+                    if st.button("🗑️ Eliminar Visita", key=f"del_{visita['id']}"):
+                        st.session_state['visita_to_delete'] = visita['id']
+                        st.session_state['show_delete_confirm'] = True
+                        st.rerun()
+
+    # Delete confirmation dialog
+    if st.session_state.get('show_delete_confirm', False):
+        visita_id = st.session_state.get('visita_to_delete')
+        if visita_id:
+            st.warning("¿Está seguro que desea eliminar esta visita? Esta acción no se puede deshacer.")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("✅ Confirmar Eliminación", key="confirm_delete"):
+                    delete_visita(visita_id)
+                    st.success("Visita eliminada exitosamente.")
+                    del st.session_state['visita_to_delete']
+                    del st.session_state['show_delete_confirm']
+                    st.rerun()
+            with col2:
+                if st.button("❌ Cancelar", key="cancel_delete"):
+                    del st.session_state['visita_to_delete']
+                    del st.session_state['show_delete_confirm']
                     st.rerun()
     else:
         st.info("No hay visitas registradas esta semana.")

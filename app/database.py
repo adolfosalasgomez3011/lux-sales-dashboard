@@ -1,3 +1,10 @@
+def delete_visita(visita_id: int) -> None:
+    """Delete a visit record by ID"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM visitas WHERE id = ?", (visita_id,))
+    conn.commit()
+    conn.close()
 """
 Database schema and operations for Lux Sales Dashboard
 Author: GitHub Copilot
@@ -160,6 +167,21 @@ def create_visita(nombre: str, tipo_negocio: str, direccion: str,
     conn.close()
     
     return visita_id
+
+
+def update_visita(visita_id: int, nombre: str, tipo_negocio: str, direccion: str,
+                  fecha: date, semana: str, notas: Optional[str] = None) -> None:
+    """Update an existing visit record by ID"""
+    business_id = get_or_create_business(nombre, tipo_negocio, direccion)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE visitas
+        SET business_id = ?, fecha = ?, semana = ?, notas = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (business_id, fecha, semana, notas, visita_id))
+    conn.commit()
+    conn.close()
 
 
 def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,

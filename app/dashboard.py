@@ -150,6 +150,7 @@ elif st.session_state['page'] == "📝 Registrar Visita":
                         update_visita(editing_visita['id'], nombre, tipo_negocio, direccion, fecha, semana, notas)
                         st.success(f"✅ Visita actualizada exitosamente! ID: {editing_visita['id']}")
                         del st.session_state['visita_to_edit']
+                        st.rerun()
                     else:
                         visita_id = create_visita(nombre, tipo_negocio, direccion, fecha, semana, notas)
                         st.success(f"✅ Visita registrada exitosamente! ID: {visita_id}")

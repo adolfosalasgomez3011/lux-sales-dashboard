@@ -37,7 +37,7 @@ st.set_page_config(
 init_database()
 
 # Constants
-TIPOS_NEGOCIO = ["Taller Automotriz", "Detailing", "Maestranza", "Factoría", "Otro"]
+TIPOS_NEGOCIO = ["Taller Automotriz", "Detailing", "Maestranza", "Factoría", "Comercializadora", "Salón de Belleza", "Otro"]
 PRODUCTOS = ["JP01Y (Poliurea Alto Tránsito)", "JP02R (Poliurea Impermeabilización)", 
              "JS02Y (Poliaspártico)", "JS02Y + Flakes Decorativos", 
              "1002A/B (Poliuretano Brillante)", "1003A/B (Poliuretano Mate)"]

@@ -15,9 +15,10 @@ sys.path.append(str(Path(__file__).parent))
 
 from database_supabase import (
     init_database, create_visita, update_visita, delete_visita, 
-    create_oportunidad, update_oportunidad, delete_oportunidad, 
+    create_oportunidad, update_oportunidad, delete_oportunidad, mark_opportunity_lost,
     create_venta, get_visitas_by_period, get_oportunidades_activas, 
-    get_ventas_by_period, generate_venta_id, get_week_number
+    get_ventas_by_period, generate_venta_id, get_week_number,
+    SALES_REPS, ASSIGNED_TO
 )
 from excel_reader import (
     read_gastos_excel, get_gastos_by_period, get_gastos_by_week,
@@ -442,6 +443,32 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                 del st.session_state['opp_to_delete']
                 st.rerun()
 
+    # Handle lost opportunity state
+    if 'opp_to_lose' in st.session_state:
+        st.info(f"Marcando como PERDIDA la oportunidad de '{st.session_state['opp_to_lose']['nombre']}'")
+        with st.form("form_lost_opp"):
+            motivo = st.text_area("Motivo de la pérdida *", 
+                                 placeholder="Ej: Precio muy alto, competencia ganó, proyecto cancelado...")
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                confirm_lost = st.form_submit_button("📉 Confirmar Pérdida", use_container_width=True)
+            with c2:
+                cancel_lost = st.form_submit_button("❌ Cancelar", use_container_width=True)
+            
+            if confirm_lost:
+                if motivo:
+                    mark_opportunity_lost(st.session_state['opp_to_lose']['id'], motivo)
+                    st.success("Oportunidad marcada como perdida.")
+                    del st.session_state['opp_to_lose']
+                    st.rerun()
+                else:
+                    st.error("⚠️ Debe ingresar un motivo.")
+            
+            if cancel_lost:
+                del st.session_state['opp_to_lose']
+                st.rerun()
+
     oportunidades = get_oportunidades_activas()
     
     if oportunidades:
@@ -466,7 +493,7 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                 if opp['siguiente_accion']:
                     st.write(f"**Siguiente Acción:** {opp['siguiente_accion']}")
                 
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
                 with col1:
                     if st.button("💰 Convertir", key=f"convventa_{opp['id']}"):
                         st.session_state['opp_to_convert'] = opp
@@ -477,6 +504,10 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                         st.session_state['opp_to_edit'] = opp
                         st.rerun()
                 with col3:
+                    if st.button("📉 Perdida", key=f"lost_{opp['id']}"):
+                        st.session_state['opp_to_lose'] = opp
+                        st.rerun()
+                with col4:
                     if st.button("🗑️ Eliminar", key=f"del_{opp['id']}"):
                         st.session_state['opp_to_delete'] = opp
                         st.rerun()

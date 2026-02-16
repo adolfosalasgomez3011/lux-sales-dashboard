@@ -170,6 +170,31 @@ def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, dire
         "updated_at": "now()"
     }
 
+def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, direccion: str,
+                       fecha_contacto: date, semana: str, m2_estimado: Optional[int] = None,
+                       producto_interes: Optional[str] = None, siguiente_accion: Optional[str] = None,
+                       source: Optional[str] = None,
+                       nombre_contacto: Optional[str] = None, cargo_contacto: Optional[str] = None,
+                       celular_contacto: Optional[str] = None,
+                       asignado_a: Optional[str] = None) -> None:
+    """Update existing opportunity"""
+    supabase = init_connection()
+    business_id = get_or_create_business(nombre, tipo_negocio, direccion)
+    
+    update_data = {
+        "business_id": business_id,
+        "fecha_contacto": fecha_contacto.isoformat(),
+        "semana": semana,
+        "m2_estimado": m2_estimado,
+        "producto_interes": producto_interes,
+        "siguiente_accion": siguiente_accion,
+        "source": source,
+        "nombre_contacto": nombre_contacto,
+        "cargo_contacto": cargo_contacto,
+        "celular_contacto": celular_contacto,
+        "updated_at": "now()"
+    }
+
     if asignado_a:
         update_data["asignado_a"] = asignado_a
     # If asignado_a is explicitly passed as None or empty, we generally don't want to clear it 
@@ -178,6 +203,15 @@ def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, dire
     # or a new value if they want to change it.
     
     supabase.table("oportunidades").update(update_data).eq("id", oportunidad_id).execute()
+
+def mark_opportunity_lost(oportunidad_id: int, motivo_perdida: str) -> None:
+    """Mark opportunity as lost with a reason"""
+    supabase = init_connection()
+    supabase.table("oportunidades").update({
+        "estado": "Perdida",
+        "motivo_perdida": motivo_perdida,
+        "updated_at": "now()"
+    }).eq("id", oportunidad_id).execute()
 
 def delete_oportunidad(oportunidad_id: int) -> None:
     """Delete opportunity"""

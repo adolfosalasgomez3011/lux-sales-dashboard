@@ -101,6 +101,12 @@ def update_visita(visita_id: int, nombre: str, tipo_negocio: str, direccion: str
 def delete_visita(visita_id: int) -> None:
     """Delete a visit record by ID"""
     supabase = init_connection()
+    
+    # First, decouple any linked opportunities (set visita_id to NULL)
+    # This prevents foreign key constraint errors
+    supabase.table("oportunidades").update({"visita_id": None}).eq("visita_id", visita_id).execute()
+    
+    # Now safe to delete the visit
     supabase.table("visitas").delete().eq("id", visita_id).execute()
 
 def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,

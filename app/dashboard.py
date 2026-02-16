@@ -313,13 +313,16 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                                  placeholder="Ej: Av. Argentina 890, Callao", height=80)
         
         # --- Contact Info ---
-        col_c1, col_c2 = st.columns(2)
+        col_c1, col_c2, col_c3 = st.columns(3)
         def_contacto = opp_to_edit.get('nombre_contacto', "") if opp_to_edit else ""
+        def_cargo = opp_to_edit.get('cargo_contacto', "") if opp_to_edit else ""
         def_celular = opp_to_edit.get('celular_contacto', "") if opp_to_edit else ""
         
         with col_c1:
-            nombre_contacto = st.text_input("Nombre de Contacto", value=def_contacto, placeholder="Ej: Juan Pérez (Dueño)")
+            nombre_contacto = st.text_input("Nombre de Contacto", value=def_contacto, placeholder="Ej: Juan Pérez")
         with col_c2:
+            cargo_contacto = st.text_input("Cargo", value=def_cargo, placeholder="Ej: Jefe de Mantenimiento")
+        with col_c3:
             celular_contacto = st.text_input("Nro Celular", value=def_celular, placeholder="Ej: 999 888 777")
         # --------------------
         
@@ -373,7 +376,7 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                         update_oportunidad(
                             opp_to_edit['id'], nombre, tipo_negocio, direccion,
                             fecha_contacto, semana, m2_val, prod_val, accion_val, source,
-                            nombre_contacto, celular_contacto
+                            nombre_contacto, cargo_contacto, celular_contacto
                         )
                         st.success(f"✅ Oportunidad actualizada exitosamente!")
                         del st.session_state['opp_to_edit']
@@ -386,7 +389,7 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                             nombre, tipo_negocio, direccion, fecha_contacto, semana,
                             m2_val, prod_val, accion_val,
                             visita_id, source,
-                            nombre_contacto, celular_contacto
+                            nombre_contacto, cargo_contacto, celular_contacto
                         )
                         st.success(f"✅ Oportunidad registrada exitosamente! ID: {opp_id}")
                         st.balloons()
@@ -427,11 +430,13 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                 st.write(f"**Dirección:** {opp['direccion']}")
                 
                 # Show contact info if available
-                if opp.get('nombre_contacto') or opp.get('celular_contacto'):
-                    contact_str = opp.get('nombre_contacto', '')
-                    if opp.get('celular_contacto'):
-                         contact_str += f" ({opp['celular_contacto']})"
-                    st.write(f"**Contacto:** {contact_str.strip()}")
+                if opp.get('nombre_contacto') or opp.get('celular_contacto') or opp.get('cargo_contacto'):
+                    contact_parts = []
+                    if opp.get('nombre_contacto'): contact_parts.append(opp['nombre_contacto'])
+                    if opp.get('cargo_contacto'): contact_parts.append(f"({opp['cargo_contacto']})")
+                    if opp.get('celular_contacto'): contact_parts.append(f"📞 {opp['celular_contacto']}")
+                    
+                    st.write(f"**Contacto:** {' '.join(contact_parts)}")
 
                 st.write(f"**Fuente:** {opp.get('source', 'N/A')}")
                 st.write(f"**Fecha Contacto:** {opp['fecha_contacto']} ({opp['semana']})")

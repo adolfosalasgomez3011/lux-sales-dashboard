@@ -232,6 +232,8 @@ elif st.session_state['page'] == "📝 Registrar Visita":
                         st.session_state['visita_to_delete'] = visita['id']
                         st.session_state['show_delete_confirm'] = True
                         st.rerun()
+    else:
+        st.info("No hay visitas registradas en este período.")
 
     # Delete confirmation dialog
     if st.session_state.get('show_delete_confirm', False):
@@ -240,19 +242,22 @@ elif st.session_state['page'] == "📝 Registrar Visita":
             st.warning("¿Está seguro que desea eliminar esta visita? Esta acción no se puede deshacer.")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("✅ Confirmar Eliminación", key="confirm_delete"):
-                    delete_visita(visita_id)
-                    st.success("Visita eliminada exitosamente.")
-                    del st.session_state['visita_to_delete']
-                    del st.session_state['show_delete_confirm']
-                    st.rerun()
+                # Use a specific key for the confirm button that doesn't conflict
+                if st.button("✅ Confirmar Eliminación", key="confirm_delete_btn"):
+                    try:
+                        delete_visita(visita_id)
+                        st.success("Visita eliminada exitosamente.")
+                        # Clear state
+                        del st.session_state['visita_to_delete']
+                        del st.session_state['show_delete_confirm']
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error al eliminar: {e}")
             with col2:
-                if st.button("❌ Cancelar", key="cancel_delete"):
+                if st.button("❌ Cancelar", key="cancel_delete_btn"):
                     del st.session_state['visita_to_delete']
                     del st.session_state['show_delete_confirm']
                     st.rerun()
-    else:
-        st.info("No hay visitas registradas esta semana.")
 
 
 # ============= PAGE: REGISTRAR OPORTUNIDAD =============

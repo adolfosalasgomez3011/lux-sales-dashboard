@@ -42,6 +42,7 @@ PRODUCTOS = ["JP01Y (Poliurea Alto Tránsito)", "JP02R (Poliurea Impermeabilizac
              "JS02Y (Poliaspártico)", "JS02Y + Flakes Decorativos", 
              "1002A/B (Poliuretano Brillante)", "1003A/B (Poliuretano Mate)"]
 SOURCES = ["Digital Advertising", "F2F Contact", "Known Client", "Referral"]
+ASSIGNED_TO = ["Sebastian", "Ingemar", "Emmanuel", "Adolfo"]
 
 # Sidebar navigation
 st.sidebar.title("📊 Lux Dashboard")
@@ -360,6 +361,24 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                                            value=def_accion or "",
                                            placeholder="Ej: Visita técnica programada para 20-Ene",
                                            height=100)
+            
+            # --- Auto-Assignment Display / Edit ---
+            if opp_to_edit:
+                curr_assigned = opp_to_edit.get('asignado_a')
+                # If current assigned is not in list (e.g. None), default to first or handle it
+                try:
+                    assigned_idx = ASSIGNED_TO.index(curr_assigned)
+                except ValueError:
+                    assigned_idx = 0
+                
+                # Allow manual reassignment
+                asignado_a = st.selectbox("Asignado a", ASSIGNED_TO, index=assigned_idx)
+            else:
+                # For new opportunities, assignment happens automatically on creation
+                # We do NOT let the user pick here to ensure the probabilities are respected
+                st.info("ℹ️ La oportunidad será asignada automáticamente a un vendedor al guardar.")
+                asignado_a = None
+            # --------------------------------------
         
         btn_label = "💾 Actualizar Oportunidad" if opp_to_edit else "💾 Guardar Oportunidad"
         submitted = st.form_submit_button(btn_label, use_container_width=True)
@@ -376,7 +395,8 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                         update_oportunidad(
                             opp_to_edit['id'], nombre, tipo_negocio, direccion,
                             fecha_contacto, semana, m2_val, prod_val, accion_val, source,
-                            nombre_contacto, cargo_contacto, celular_contacto
+                            nombre_contacto, cargo_contacto, celular_contacto,
+                            asignado_a=asignado_a
                         )
                         st.success(f"✅ Oportunidad actualizada exitosamente!")
                         del st.session_state['opp_to_edit']
@@ -439,6 +459,7 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                     st.write(f"**Contacto:** {' '.join(contact_parts)}")
 
                 st.write(f"**Fuente:** {opp.get('source', 'N/A')}")
+                st.write(f"**Asignado a:** {opp.get('asignado_a', 'Pendiente')}")
                 st.write(f"**Fecha Contacto:** {opp['fecha_contacto']} ({opp['semana']})")
                 if opp['producto_interes']:
                     st.write(f"**Producto:** {opp['producto_interes']}")

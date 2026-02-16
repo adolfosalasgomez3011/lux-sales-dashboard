@@ -38,6 +38,7 @@ CREATE TABLE public.oportunidades (
     nombre_contacto TEXT, -- Added column
     cargo_contacto TEXT, -- Added column
     celular_contacto TEXT, -- Added column
+    asignado_a TEXT, -- Added column: Sebastian, Ingemar, Emmanuel, Adolfo
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

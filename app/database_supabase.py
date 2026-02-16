@@ -3,12 +3,16 @@ import os
 import streamlit as st
 from supabase import create_client, Client
 from datetime import date, datetime
+import random
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 # --- Configuration ---
 # Uses st.secrets for production (Streamlit Cloud)
 # Uses os.environ or .env for local development (if not using st.secrets locally)
+
+SALES_REPS = ["Emmanuel", "Sebastian", "Ingemar", "Adolfo"]
+SALES_WEIGHTS = [0.40, 0.30, 0.20, 0.10]
 
 @st.cache_resource
 def init_connection():
@@ -119,6 +123,9 @@ def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,
     supabase = init_connection()
     business_id = get_or_create_business(nombre, tipo_negocio, direccion)
     
+    # Assign sales rep automatically
+    assigned_to = random.choices(SALES_REPS, weights=SALES_WEIGHTS, k=1)[0]
+    
     new_opp = {
         "business_id": business_id,
         "fecha_contacto": fecha_contacto.isoformat(),
@@ -131,7 +138,8 @@ def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,
         "source": source,
         "nombre_contacto": nombre_contacto,
         "cargo_contacto": cargo_contacto,
-        "celular_contacto": celular_contacto
+        "celular_contacto": celular_contacto,
+        "asignado_a": assigned_to,
     }
     
     response = supabase.table("oportunidades").insert(new_opp).execute()
@@ -142,7 +150,8 @@ def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, dire
                        producto_interes: Optional[str] = None, siguiente_accion: Optional[str] = None,
                        source: Optional[str] = None,
                        nombre_contacto: Optional[str] = None, cargo_contacto: Optional[str] = None,
-                       celular_contacto: Optional[str] = None) -> None:
+                       celular_contacto: Optional[str] = None,
+                       asignado_a: Optional[str] = None) -> None:
     """Update existing opportunity"""
     supabase = init_connection()
     business_id = get_or_create_business(nombre, tipo_negocio, direccion)
@@ -160,6 +169,13 @@ def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, dire
         "celular_contacto": celular_contacto,
         "updated_at": "now()"
     }
+
+    if asignado_a:
+        update_data["asignado_a"] = asignado_a
+    # If asignado_a is explicitly passed as None or empty, we generally don't want to clear it 
+    # unless that's intended. Here we only update if a value is provided. 
+    # To prevent accidental overwrites, we rely on the callers to pass the existing value if they want to keep it,
+    # or a new value if they want to change it.
     
     supabase.table("oportunidades").update(update_data).eq("id", oportunidad_id).execute()
 

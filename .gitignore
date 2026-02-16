@@ -1,0 +1,40 @@
+# Git ignore file for Lux Sales Dashboard
+
+# Database files
+data/
+*.db
+*.db-journal
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+temp/

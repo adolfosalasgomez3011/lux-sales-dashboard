@@ -13,6 +13,7 @@ from pathlib import Path
 
 SALES_REPS = ["Emmanuel", "Sebastian", "Ingemar", "Adolfo"]
 SALES_WEIGHTS = [0.40, 0.30, 0.20, 0.10]
+ASSIGNED_TO = ["Sebastian", "Ingemar", "Emmanuel", "Adolfo"]
 
 @st.cache_resource
 def init_connection():

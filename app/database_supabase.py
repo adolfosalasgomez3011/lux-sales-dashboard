@@ -119,7 +119,7 @@ def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,
                        producto_interes: Optional[str] = None, siguiente_accion: Optional[str] = None,
                        visita_id: Optional[int] = None, source: Optional[str] = None,
                        nombre_contacto: Optional[str] = None, cargo_contacto: Optional[str] = None, 
-                       celular_contacto: Optional[str] = None) -> int:
+                       celular_contacto: Optional[str] = None, email_contacto: Optional[str] = None) -> int:
     """Create new opportunity record in Supabase"""
     supabase = init_connection()
     business_id = get_or_create_business(nombre, tipo_negocio, direccion)
@@ -140,6 +140,7 @@ def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,
         "nombre_contacto": nombre_contacto,
         "cargo_contacto": cargo_contacto,
         "celular_contacto": celular_contacto,
+        "email_contacto": email_contacto,
         "asignado_a": assigned_to,
     }
     
@@ -151,7 +152,7 @@ def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, dire
                        producto_interes: Optional[str] = None, siguiente_accion: Optional[str] = None,
                        source: Optional[str] = None,
                        nombre_contacto: Optional[str] = None, cargo_contacto: Optional[str] = None,
-                       celular_contacto: Optional[str] = None,
+                       celular_contacto: Optional[str] = None, email_contacto: Optional[str] = None,
                        asignado_a: Optional[str] = None) -> None:
     """Update existing opportunity"""
     supabase = init_connection()
@@ -168,31 +169,7 @@ def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, dire
         "nombre_contacto": nombre_contacto,
         "cargo_contacto": cargo_contacto,
         "celular_contacto": celular_contacto,
-        "updated_at": "now()"
-    }
-
-def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, direccion: str,
-                       fecha_contacto: date, semana: str, m2_estimado: Optional[int] = None,
-                       producto_interes: Optional[str] = None, siguiente_accion: Optional[str] = None,
-                       source: Optional[str] = None,
-                       nombre_contacto: Optional[str] = None, cargo_contacto: Optional[str] = None,
-                       celular_contacto: Optional[str] = None,
-                       asignado_a: Optional[str] = None) -> None:
-    """Update existing opportunity"""
-    supabase = init_connection()
-    business_id = get_or_create_business(nombre, tipo_negocio, direccion)
-    
-    update_data = {
-        "business_id": business_id,
-        "fecha_contacto": fecha_contacto.isoformat(),
-        "semana": semana,
-        "m2_estimado": m2_estimado,
-        "producto_interes": producto_interes,
-        "siguiente_accion": siguiente_accion,
-        "source": source,
-        "nombre_contacto": nombre_contacto,
-        "cargo_contacto": cargo_contacto,
-        "celular_contacto": celular_contacto,
+        "email_contacto": email_contacto,
         "updated_at": "now()"
     }
 

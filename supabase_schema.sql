@@ -73,3 +73,4 @@ CREATE POLICY "Enable all access for anon/authenticated" ON public.visitas FOR A
 CREATE POLICY "Enable all access for anon/authenticated" ON public.oportunidades FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all access for anon/authenticated" ON public.ventas FOR ALL USING (true) WITH CHECK (true);
 ALTER TABLE public.oportunidades ADD COLUMN IF NOT EXISTS motivo_perdida TEXT;
+ALTER TABLE public.oportunidades ADD COLUMN IF NOT EXISTS email_contacto TEXT;

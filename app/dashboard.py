@@ -166,14 +166,50 @@ elif st.session_state['page'] == "📝 Registrar Visita":
 
     # Show recent visits
     st.markdown("---")
-    st.markdown("### 📋 Visitas Recientes (Esta Semana)")
+    
+    # Filter controls for the list
+    col_filter1, col_filter2 = st.columns([2, 1])
+    with col_filter1:
+        st.markdown(f"### 📋 Visitas Recientes")
+    with col_filter2:
+        # Week number display in corner as requested
+        current_week_num = get_week_number(date.today())
+        st.markdown(f"#### 🗓️ Semana Actual: {current_week_num}")
 
+    # Date selector for the list
+    col_d1, col_d2 = st.columns(2)
+    with col_d1:
+        filter_option = st.selectbox(
+            "Filtrar lista por:", 
+            ["Esta Semana (Lun-Dom)", "Últimos 15 días", "Seleccionar Rango"],
+            index=1 # Default to last 15 days so we see recent entries even if they were last week
+        )
+    
     today = date.today()
-    week_start = today - timedelta(days=today.weekday())
-    visitas = get_visitas_by_period(week_start, today)
+    if filter_option == "Esta Semana (Lun-Dom)":
+        start_date = today - timedelta(days=today.weekday())
+        end_date = today + timedelta(days=6 - today.weekday())
+    elif filter_option == "Últimos 15 días":
+        start_date = today - timedelta(days=15)
+        end_date = today
+    else: # Select Range
+        with col_d2:
+            date_range = st.date_input(
+                "Selecciona rango",
+                value=(today - timedelta(days=7), today),
+                key="visit_date_range"
+            )
+            if isinstance(date_range, tuple) and len(date_range) == 2:
+                start_date, end_date = date_range
+            else:
+                start_date = today - timedelta(days=7)
+                end_date = today
+
+    visitas = get_visitas_by_period(start_date, end_date)
 
     if visitas:
-        for visita in visitas[:5]:  # Show last 5
+        st.info(f"Mostrando {len(visitas)} visitas del {start_date} al {end_date}")
+        for visita in visitas:
             with st.expander(f"📅 {visita['fecha']} | {visita['nombre']} ({visita['tipo_negocio']})"):
                 st.write(f"**Dirección:** {visita['direccion']}")
                 st.write(f"**Semana:** {visita['semana']}")

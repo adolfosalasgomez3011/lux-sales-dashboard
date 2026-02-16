@@ -35,6 +35,8 @@ CREATE TABLE public.oportunidades (
     siguiente_accion TEXT,
     estado TEXT DEFAULT 'Activa',
     source TEXT, -- Added column
+    nombre_contacto TEXT, -- Added column
+    celular_contacto TEXT, -- Added column
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -306,11 +306,22 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
             fecha_contacto = st.date_input("Fecha de Contacto *", value=def_fecha)
             semana = get_week_number(fecha_contacto)
             st.text_input("Semana", value=semana, disabled=True)
-        
+            
         def_direccion = opp_to_edit['direccion'] if opp_to_edit else (visita_convert['direccion'] if visita_convert else "")
         direccion = st.text_area("Dirección *", 
                                  value=def_direccion,
                                  placeholder="Ej: Av. Argentina 890, Callao", height=80)
+        
+        # --- Contact Info ---
+        col_c1, col_c2 = st.columns(2)
+        def_contacto = opp_to_edit.get('nombre_contacto', "") if opp_to_edit else ""
+        def_celular = opp_to_edit.get('celular_contacto', "") if opp_to_edit else ""
+        
+        with col_c1:
+            nombre_contacto = st.text_input("Nombre de Contacto", value=def_contacto, placeholder="Ej: Juan Pérez (Dueño)")
+        with col_c2:
+            celular_contacto = st.text_input("Nro Celular", value=def_celular, placeholder="Ej: 999 888 777")
+        # --------------------
         
         st.markdown("### Detalles de la Oportunidad")
         
@@ -361,7 +372,8 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                         # Update
                         update_oportunidad(
                             opp_to_edit['id'], nombre, tipo_negocio, direccion,
-                            fecha_contacto, semana, m2_val, prod_val, accion_val, source
+                            fecha_contacto, semana, m2_val, prod_val, accion_val, source,
+                            nombre_contacto, celular_contacto
                         )
                         st.success(f"✅ Oportunidad actualizada exitosamente!")
                         del st.session_state['opp_to_edit']
@@ -373,7 +385,8 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
                         opp_id = create_oportunidad(
                             nombre, tipo_negocio, direccion, fecha_contacto, semana,
                             m2_val, prod_val, accion_val,
-                            visita_id, source
+                            visita_id, source,
+                            nombre_contacto, celular_contacto
                         )
                         st.success(f"✅ Oportunidad registrada exitosamente! ID: {opp_id}")
                         st.balloons()
@@ -412,6 +425,14 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
         for opp in oportunidades[:20]:  # Show first 20
             with st.expander(f"🎯 {opp['nombre']} ({opp['tipo_negocio']}) - {opp['m2_estimado']}m²"):
                 st.write(f"**Dirección:** {opp['direccion']}")
+                
+                # Show contact info if available
+                if opp.get('nombre_contacto') or opp.get('celular_contacto'):
+                    contact_str = opp.get('nombre_contacto', '')
+                    if opp.get('celular_contacto'):
+                         contact_str += f" ({opp['celular_contacto']})"
+                    st.write(f"**Contacto:** {contact_str.strip()}")
+
                 st.write(f"**Fuente:** {opp.get('source', 'N/A')}")
                 st.write(f"**Fecha Contacto:** {opp['fecha_contacto']} ({opp['semana']})")
                 if opp['producto_interes']:

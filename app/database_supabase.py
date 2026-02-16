@@ -112,7 +112,8 @@ def delete_visita(visita_id: int) -> None:
 def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,
                        fecha_contacto: date, semana: str, m2_estimado: Optional[int] = None,
                        producto_interes: Optional[str] = None, siguiente_accion: Optional[str] = None,
-                       visita_id: Optional[int] = None, source: Optional[str] = None) -> int:
+                       visita_id: Optional[int] = None, source: Optional[str] = None,
+                       nombre_contacto: Optional[str] = None, celular_contacto: Optional[str] = None) -> int:
     """Create new opportunity record in Supabase"""
     supabase = init_connection()
     business_id = get_or_create_business(nombre, tipo_negocio, direccion)
@@ -126,7 +127,9 @@ def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,
         "siguiente_accion": siguiente_accion,
         "visita_id": visita_id,
         "estado": "Activa",
-        "source": source
+        "source": source,
+        "nombre_contacto": nombre_contacto,
+        "celular_contacto": celular_contacto
     }
     
     response = supabase.table("oportunidades").insert(new_opp).execute()
@@ -135,7 +138,8 @@ def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,
 def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, direccion: str,
                        fecha_contacto: date, semana: str, m2_estimado: Optional[int] = None,
                        producto_interes: Optional[str] = None, siguiente_accion: Optional[str] = None,
-                       source: Optional[str] = None) -> None:
+                       source: Optional[str] = None,
+                       nombre_contacto: Optional[str] = None, celular_contacto: Optional[str] = None) -> None:
     """Update existing opportunity"""
     supabase = init_connection()
     business_id = get_or_create_business(nombre, tipo_negocio, direccion)
@@ -148,6 +152,8 @@ def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, dire
         "producto_interes": producto_interes,
         "siguiente_accion": siguiente_accion,
         "source": source,
+        "nombre_contacto": nombre_contacto,
+        "celular_contacto": celular_contacto,
         "updated_at": "now()"
     }
     

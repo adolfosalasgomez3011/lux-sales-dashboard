@@ -120,7 +120,7 @@ def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,
                        visita_id: Optional[int] = None, source: Optional[str] = None,
                        nombre_contacto: Optional[str] = None, cargo_contacto: Optional[str] = None, 
                        celular_contacto: Optional[str] = None, email_contacto: Optional[str] = None) -> int:
-    """Create new opportunity record in Supabase"""
+    """Create new opportunity record in Supabase. Updated logic for email_contacto."""
     supabase = init_connection()
     business_id = get_or_create_business(nombre, tipo_negocio, direccion)
     

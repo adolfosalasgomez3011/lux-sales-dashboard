@@ -9,15 +9,12 @@ One-time admin setup:
 
 secrets.toml structure:
   [green_api]
-  instance_id = "XXXXXXXXXX"
-  token       = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-  api_url     = "https://XXXX.api.greenapi.com"
+  instance_id     = "XXXXXXXXXX"
+  token           = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  api_url         = "https://XXXX.api.greenapi.com"
   sebastian_phone = "+51XXXXXXXXX"
   ingemar_phone   = "+51XXXXXXXXX"
   emmanuel_phone  = "+51XXXXXXXXX"
-  adolfo_phone    = "+51XXXXXXXXX"
-  adolfo_phone     = "+51XXXXXXXXX"
-  adolfo_apikey    = "XXXXXX"
 """
 
 import requests
@@ -28,11 +25,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Map rep names (lowercase) to their phone secret key
+# Adolfo is the dashboard owner — no notification needed
 REP_PHONE_KEYS = {
     "sebastian": "sebastian_phone",
     "ingemar":   "ingemar_phone",
     "emmanuel":  "emmanuel_phone",
-    "adolfo":    "adolfo_phone",
 }
 
 

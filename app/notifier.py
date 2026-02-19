@@ -124,7 +124,8 @@ def notify_new_assignment(
         f"📣 *Fuente:* {source_str}\n"
         f"👤 *Contacto:* {contacto_str} | {celular_str}\n"
         f"➡️ *Siguiente Acción:* {accion_str}\n\n"
-        f"Ingresa al Dashboard para ver los detalles completos."
+        f"👉 Gestiona esta oportunidad aquí:\n"
+        f"https://lux-dashboard.streamlit.app"
     )
 
     send_whatsapp(rep_name, message)
@@ -159,7 +160,8 @@ def notify_reassignment(
         f"📐 *m² Estimado:* {m2_str}\n"
         f"👤 *Contacto:* {contacto_str} | {celular_str}\n"
         f"➡️ *Siguiente Acción:* {accion_str}\n\n"
-        f"Ingresa al Dashboard para ver los detalles completos."
+        f"👉 Gestiona esta oportunidad aquí:\n"
+        f"https://lux-dashboard.streamlit.app"
     )
 
     send_whatsapp(new_rep_name, message)

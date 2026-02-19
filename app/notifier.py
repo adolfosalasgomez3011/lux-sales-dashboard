@@ -1,89 +1,103 @@
 """
 WhatsApp Notification Module – Lux Dashboard
-Uses CallMeBot free API (https://www.callmebot.com/blog/free-api-whatsapp-messages/)
+Uses Green API (https://green-api.com) – no rep opt-in required.
 
-Each sales rep must opt-in ONCE:
-  1. Save this number in their WhatsApp contacts: +34 644 52 74 38  (name it e.g. "CallMeBot")
-  2. Send the message:  I allow callmebot to send me messages
-     ...to that contact via WhatsApp
-  3. They will receive their personal apikey by WhatsApp within seconds.
-  4. Add their phone (+51XXXXXXXXX) and apikey to secrets.toml and Streamlit Cloud secrets.
+One-time admin setup:
+  1. Create account at green-api.com
+  2. Create an instance and scan QR with any WhatsApp number
+  3. Add credentials to secrets.toml and Streamlit Cloud secrets:
 
-secrets.toml structure needed:
-  [whatsapp]
-  enabled = true
-  sebastian_phone  = "+51XXXXXXXXX"
-  sebastian_apikey = "XXXXXX"
-  ingemar_phone    = "+51XXXXXXXXX"
-  ingemar_apikey   = "XXXXXX"
-  emmanuel_phone   = "+51XXXXXXXXX"
-  emmanuel_apikey  = "XXXXXX"
+secrets.toml structure:
+  [green_api]
+  instance_id = "XXXXXXXXXX"
+  token       = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  api_url     = "https://XXXX.api.greenapi.com"
+  sebastian_phone = "+51XXXXXXXXX"
+  ingemar_phone   = "+51XXXXXXXXX"
+  emmanuel_phone  = "+51XXXXXXXXX"
+  adolfo_phone    = "+51XXXXXXXXX"
   adolfo_phone     = "+51XXXXXXXXX"
   adolfo_apikey    = "XXXXXX"
 """
 
 import requests
-import urllib.parse
 import streamlit as st
 from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Map rep names (lowercase) to their secrets keys
-REP_KEYS = {
-    "sebastian": ("sebastian_phone", "sebastian_apikey"),
-    "ingemar":   ("ingemar_phone",   "ingemar_apikey"),
-    "emmanuel":  ("emmanuel_phone",  "emmanuel_apikey"),
-    "adolfo":    ("adolfo_phone",    "adolfo_apikey"),
+# Map rep names (lowercase) to their phone secret key
+REP_PHONE_KEYS = {
+    "sebastian": "sebastian_phone",
+    "ingemar":   "ingemar_phone",
+    "emmanuel":  "emmanuel_phone",
+    "adolfo":    "adolfo_phone",
 }
 
-CALLMEBOT_URL = "https://api.callmebot.com/whatsapp.php"
 
-
-def _get_rep_credentials(rep_name: str) -> tuple[Optional[str], Optional[str]]:
-    """Retrieve phone and apikey for a rep from st.secrets, silently return None if missing."""
+def _get_green_api_config() -> dict:
+    """Retrieve Green API config from st.secrets."""
     try:
-        wapp = st.secrets.get("whatsapp", {})
-        phone_key, apikey_key = REP_KEYS[rep_name.lower()]
-        phone = wapp.get(phone_key)
-        apikey = wapp.get(apikey_key)
-        return phone, apikey
-    except (KeyError, AttributeError):
-        return None, None
+        return st.secrets.get("green_api", {})
+    except Exception:
+        return {}
+
+
+def _get_rep_phone(rep_name: str) -> Optional[str]:
+    """Retrieve phone number for a rep, silently return None if missing."""
+    try:
+        cfg = _get_green_api_config()
+        phone_key = REP_PHONE_KEYS.get(rep_name.lower())
+        if not phone_key:
+            return None
+        phone = cfg.get(phone_key, "")
+        # Must be a real number, not a placeholder
+        return phone if phone and len(phone) > 5 else None
+    except Exception:
+        return None
 
 
 def _is_enabled() -> bool:
-    """Check if WhatsApp notifications are enabled in secrets."""
+    """Check if Green API is configured."""
     try:
-        return st.secrets.get("whatsapp", {}).get("enabled", False)
+        cfg = _get_green_api_config()
+        return bool(cfg.get("instance_id") and cfg.get("token") and cfg.get("api_url"))
     except Exception:
         return False
 
 
 def send_whatsapp(rep_name: str, message: str) -> bool:
     """
-    Send a WhatsApp message to a sales rep via CallMeBot.
+    Send a WhatsApp message to a sales rep via Green API.
     Returns True on success, False on failure (silent – never crashes the app).
     """
     if not _is_enabled():
         return False
 
-    phone, apikey = _get_rep_credentials(rep_name)
-
-    if not phone or not apikey:
-        logger.warning(f"WhatsApp: no credentials configured for rep '{rep_name}'. Skipping.")
+    phone = _get_rep_phone(rep_name)
+    if not phone:
+        logger.warning(f"WhatsApp: no phone configured for rep '{rep_name}'. Skipping.")
         return False
 
     try:
-        encoded_message = urllib.parse.quote(message)
-        url = f"{CALLMEBOT_URL}?phone={phone}&text={encoded_message}&apikey={apikey}"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            logger.info(f"WhatsApp sent to {rep_name}")
+        cfg = _get_green_api_config()
+        instance_id = cfg["instance_id"]
+        token = cfg["token"]
+        api_url = cfg["api_url"].rstrip("/")
+
+        # Green API chatId format: number without '+' followed by @c.us
+        chat_id = phone.replace("+", "").replace(" ", "") + "@c.us"
+
+        url = f"{api_url}/waInstance{instance_id}/sendMessage/{token}"
+        payload = {"chatId": chat_id, "message": message}
+
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 200 and response.json().get("idMessage"):
+            logger.info(f"WhatsApp sent to {rep_name} ({chat_id})")
             return True
         else:
-            logger.warning(f"CallMeBot returned {response.status_code} for {rep_name}: {response.text}")
+            logger.warning(f"Green API returned {response.status_code} for {rep_name}: {response.text}")
             return False
     except requests.exceptions.Timeout:
         logger.warning(f"WhatsApp timeout for {rep_name}")

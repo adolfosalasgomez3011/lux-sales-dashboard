@@ -7,6 +7,13 @@ import random
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
+try:
+    from notifier import notify_new_assignment, notify_reassignment
+except ImportError:
+    # Graceful fallback if notifier is unavailable
+    def notify_new_assignment(*args, **kwargs): pass
+    def notify_reassignment(*args, **kwargs): pass
+
 # --- Configuration ---
 # Uses st.secrets for production (Streamlit Cloud)
 # Uses os.environ or .env for local development (if not using st.secrets locally)
@@ -145,7 +152,25 @@ def create_oportunidad(nombre: str, tipo_negocio: str, direccion: str,
     }
     
     response = supabase.table("oportunidades").insert(new_opp).execute()
-    return response.data[0]['id']
+    opp_id = response.data[0]['id']
+
+    # Notify assigned rep
+    try:
+        notify_new_assignment(
+            rep_name=assigned_to,
+            opp_id=opp_id,
+            nombre_negocio=nombre,
+            producto=producto_interes,
+            m2=m2_estimado,
+            siguiente_accion=siguiente_accion,
+            nombre_contacto=nombre_contacto,
+            celular_contacto=celular_contacto,
+            source=source,
+        )
+    except Exception:
+        pass  # Never let notification failure break the app
+
+    return opp_id
 
 def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, direccion: str,
                        fecha_contacto: date, semana: str, m2_estimado: Optional[int] = None,
@@ -154,10 +179,22 @@ def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, dire
                        nombre_contacto: Optional[str] = None, cargo_contacto: Optional[str] = None,
                        celular_contacto: Optional[str] = None, email_contacto: Optional[str] = None,
                        asignado_a: Optional[str] = None) -> None:
-    """Update existing opportunity"""
+    """Update existing opportunity. Notifies rep via WhatsApp if asignado_a changes."""
     supabase = init_connection()
     business_id = get_or_create_business(nombre, tipo_negocio, direccion)
-    
+
+    # Fetch current asignado_a BEFORE updating to detect reassignment
+    prev_assigned = None
+    try:
+        prev_response = supabase.table("oportunidades")\
+            .select("asignado_a")\
+            .eq("id", oportunidad_id)\
+            .single()\
+            .execute()
+        prev_assigned = prev_response.data.get("asignado_a") if prev_response.data else None
+    except Exception:
+        pass
+
     update_data = {
         "business_id": business_id,
         "fecha_contacto": fecha_contacto.isoformat(),
@@ -181,6 +218,28 @@ def update_oportunidad(oportunidad_id: int, nombre: str, tipo_negocio: str, dire
     # or a new value if they want to change it.
     
     supabase.table("oportunidades").update(update_data).eq("id", oportunidad_id).execute()
+
+    # Notify new rep if assignment changed
+    try:
+        new_assigned = asignado_a if asignado_a else prev_assigned
+        if (
+            asignado_a
+            and prev_assigned
+            and asignado_a.lower() != prev_assigned.lower()
+        ):
+            notify_reassignment(
+                new_rep_name=asignado_a,
+                prev_rep_name=prev_assigned,
+                opp_id=oportunidad_id,
+                nombre_negocio=nombre,
+                producto=producto_interes,
+                m2=m2_estimado,
+                siguiente_accion=siguiente_accion,
+                nombre_contacto=nombre_contacto,
+                celular_contacto=celular_contacto,
+            )
+    except Exception:
+        pass  # Never let notification failure break the app
 
 def mark_opportunity_lost(oportunidad_id: int, motivo_perdida: str) -> None:
     """Mark opportunity as lost with a reason"""

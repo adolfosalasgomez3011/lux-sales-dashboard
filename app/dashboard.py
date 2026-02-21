@@ -94,12 +94,24 @@ if st.session_state['page'] == "🏠 Inicio":
     
     with col1:
         st.metric("✅ Visitas esta Semana", len(visitas), delta=f"{len(visitas_mes)} en el mes")
-    
+        if st.button("📋 Ver Visitas", key="home_ver_visitas", use_container_width=True):
+            st.session_state['ver_registros_tab'] = 0
+            st.session_state['page'] = "📋 Ver Registros"
+            st.rerun()
+
     with col2:
         st.metric("🎯 Oportunidades Activas", len(oportunidades))
-    
+        if st.button("📋 Ver Oportunidades", key="home_ver_opps", use_container_width=True):
+            st.session_state['ver_registros_tab'] = 1
+            st.session_state['page'] = "📋 Ver Registros"
+            st.rerun()
+
     with col3:
         st.metric("💰 Ventas esta Semana", len(ventas_semana))
+        if st.button("📋 Ver Ventas", key="home_ver_ventas", use_container_width=True):
+            st.session_state['ver_registros_tab'] = 2
+            st.session_state['page'] = "📋 Ver Registros"
+            st.rerun()
     
     st.markdown("---")
     st.markdown("### 📌 Acciones Rápidas")
@@ -660,7 +672,18 @@ elif st.session_state['page'] == "💰 Registrar Venta":
 elif st.session_state['page'] == "📋 Ver Registros":
     st.title("📋 Historial de Registros")
     
-    tab1, tab2, tab3, tab4 = st.tabs(["📝 Visitas", "🎯 Oportunidades", "💰 Ventas", "💸 Gastos"])
+    # Pre-select tab if navigated from home page
+    _tab_goto = st.session_state.pop('ver_registros_tab', 0)
+    _all_tabs = ["📝 Visitas", "🎯 Oportunidades", "💰 Ventas", "💸 Gastos"]
+    # Rotate so the desired tab is first (Streamlit opens first tab by default)
+    _tabs_ordered = _all_tabs[_tab_goto:] + _all_tabs[:_tab_goto]
+    _rendered = st.tabs(_tabs_ordered)
+    # Map back to original tab variables regardless of rotation
+    _tab_map = {name: widget for name, widget in zip(_tabs_ordered, _rendered)}
+    tab1 = _tab_map["📝 Visitas"]
+    tab2 = _tab_map["🎯 Oportunidades"]
+    tab3 = _tab_map["💰 Ventas"]
+    tab4 = _tab_map["💸 Gastos"]
     
     with tab1:
         st.markdown("### Visitas Registradas")

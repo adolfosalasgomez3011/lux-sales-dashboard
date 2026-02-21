@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).parent))
 from database_supabase import (
     init_database, create_visita, update_visita, delete_visita, 
     create_oportunidad, update_oportunidad, delete_oportunidad, mark_opportunity_lost,
-    create_venta, get_visitas_by_period, get_oportunidades_activas, 
+    create_venta, update_venta, get_visitas_by_period, get_oportunidades_activas,
     get_ventas_by_period, generate_venta_id, get_week_number,
     SALES_REPS, ASSIGNED_TO
 )
@@ -523,91 +523,120 @@ elif st.session_state['page'] == "🎯 Registrar Oportunidad":
 
 # ============= PAGE: REGISTRAR VENTA =============
 elif st.session_state['page'] == "💰 Registrar Venta":
-    st.title("💰 Registrar Nueva Venta")
-    
-    # Check if converting from opportunity
+    # Check edit / convert states
+    venta_to_edit = st.session_state.get('venta_to_edit', None)
     opp_convert = st.session_state.get('opp_to_convert', None)
-    
+
+    if venta_to_edit:
+        st.title("✏️ Editar Venta")
+        st.info(f"Editando: {venta_to_edit['venta_id']} — {venta_to_edit['nombre']}")
+        if st.button("❌ Cancelar edición"):
+            del st.session_state['venta_to_edit']
+            st.rerun()
+    else:
+        st.title("💰 Registrar Nueva Venta")
+
+    # --- helpers to pre-fill ---
+    def _vdate(key, fallback):
+        val = venta_to_edit.get(key) if venta_to_edit else None
+        if val is None:
+            return fallback
+        if isinstance(val, str):
+            from datetime import datetime as _dt
+            return _dt.strptime(val, '%Y-%m-%d').date()
+        return val
+
     with st.form("form_venta"):
         st.markdown("### Datos de la Venta")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
-            venta_id = st.text_input("ID de Venta *", value=generate_venta_id(), disabled=True)
+            venta_id_val = venta_to_edit['venta_id'] if venta_to_edit else generate_venta_id()
+            st.text_input("ID de Venta", value=venta_id_val, disabled=True)
             nombre = st.text_input("Nombre del Negocio *",
-                                   value=opp_convert['nombre'] if opp_convert else "",
-                                   placeholder="Ej: Taller El Rayo")
+                value=venta_to_edit['nombre'] if venta_to_edit else (opp_convert['nombre'] if opp_convert else ""),
+                placeholder="Ej: Taller El Rayo")
             tipo_negocio = st.selectbox("Tipo de Negocio *", TIPOS_NEGOCIO,
-                                       index=TIPOS_NEGOCIO.index(opp_convert['tipo_negocio']) if opp_convert else 0)
-        
+                index=TIPOS_NEGOCIO.index(venta_to_edit['tipo_negocio']) if venta_to_edit and venta_to_edit.get('tipo_negocio') in TIPOS_NEGOCIO
+                      else (TIPOS_NEGOCIO.index(opp_convert['tipo_negocio']) if opp_convert else 0))
+
         with col2:
-            fecha_cierre = st.date_input("Fecha de Cierre *", value=date.today())
+            fecha_cierre = st.date_input("Fecha de Cierre *",
+                value=_vdate('fecha_cierre', date.today()))
             semana = get_week_number(fecha_cierre)
             st.text_input("Semana", value=semana, disabled=True)
-        
+
         direccion = st.text_area("Dirección *",
-                                 value=opp_convert['direccion'] if opp_convert else "",
-                                 placeholder="Ej: Av. Arriola 234, La Victoria", height=80)
-        
+            value=venta_to_edit['direccion'] if venta_to_edit else (opp_convert['direccion'] if opp_convert else ""),
+            placeholder="Ej: Av. Arriola 234, La Victoria", height=80)
+
         st.markdown("### Detalles del Proyecto")
-        
+
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
-            m2_real = st.number_input("m² Real *", min_value=1, 
-                                     value=opp_convert['m2_estimado'] if opp_convert and opp_convert['m2_estimado'] else 100,
-                                     step=10)
-        
+            _m2_default = venta_to_edit['m2_real'] if venta_to_edit else (opp_convert['m2_estimado'] if opp_convert and opp_convert.get('m2_estimado') else 100)
+            m2_real = st.number_input("m² Real *", min_value=1, value=int(_m2_default), step=10)
+
         with col2:
-            producto = st.selectbox("Producto *", PRODUCTOS,
-                                   index=PRODUCTOS.index(opp_convert['producto_interes']) if opp_convert and opp_convert['producto_interes'] in PRODUCTOS else 0)
-        
+            _prod_default = venta_to_edit.get('producto') if venta_to_edit else (opp_convert.get('producto_interes') if opp_convert else None)
+            _prod_idx = PRODUCTOS.index(_prod_default) if _prod_default and _prod_default in PRODUCTOS else 0
+            producto = st.selectbox("Producto *", PRODUCTOS, index=_prod_idx)
+
         with col3:
-            monto_soles = st.number_input("Monto S/. *", min_value=0.0, value=10000.0, step=500.0)
-        
-        fecha_instalacion = st.date_input("Fecha de Instalación", value=date.today() + timedelta(days=7))
-        
-        submitted = st.form_submit_button("💰 Registrar Venta", use_container_width=True)
-        
+            _monto_default = float(venta_to_edit['monto_soles']) if venta_to_edit else 10000.0
+            monto_soles = st.number_input("Monto S/. *", min_value=0.0, value=_monto_default, step=500.0)
+
+        fecha_instalacion = st.date_input("Fecha de Instalación",
+            value=_vdate('fecha_instalacion', date.today() + timedelta(days=7)))
+
+        btn_label = "💾 Actualizar Venta" if venta_to_edit else "💰 Registrar Venta"
+        submitted = st.form_submit_button(btn_label, use_container_width=True)
+
         if submitted:
             if nombre and tipo_negocio and direccion and m2_real > 0 and monto_soles > 0:
                 try:
-                    opp_id = opp_convert['id'] if opp_convert else None
-                    sale_id = create_venta(
-                        venta_id, nombre, tipo_negocio, direccion,
-                        fecha_cierre, semana, m2_real, producto, monto_soles,
-                        fecha_instalacion, opp_id
-                    )
-                    st.success(f"✅ Venta registrada exitosamente! {venta_id}")
-                    st.balloons()
-                    
-                    # Show summary
-                    st.info(f"""
-                    **Resumen de la Venta:**
-                    - Cliente: {nombre}
-                    - m²: {m2_real}
-                    - Monto: S/. {monto_soles:,.2f}
-                    - Instalación: {fecha_instalacion}
-                    """)
-                    
-                    # Clear conversion state
-                    if 'opp_to_convert' in st.session_state:
-                        del st.session_state['opp_to_convert']
-                        
+                    if venta_to_edit:
+                        update_venta(
+                            venta_to_edit['id'], nombre, tipo_negocio, direccion,
+                            fecha_cierre, semana, m2_real, producto, monto_soles,
+                            fecha_instalacion
+                        )
+                        st.success(f"✅ Venta actualizada: {venta_to_edit['venta_id']}")
+                        del st.session_state['venta_to_edit']
+                        st.rerun()
+                    else:
+                        opp_id = opp_convert['id'] if opp_convert else None
+                        create_venta(
+                            venta_id_val, nombre, tipo_negocio, direccion,
+                            fecha_cierre, semana, m2_real, producto, monto_soles,
+                            fecha_instalacion, opp_id
+                        )
+                        st.success(f"✅ Venta registrada exitosamente! {venta_id_val}")
+                        st.balloons()
+                        st.info(f"""
+                        **Resumen de la Venta:**
+                        - Cliente: {nombre}
+                        - m²: {m2_real}
+                        - Monto: S/. {monto_soles:,.2f}
+                        - Instalación: {fecha_instalacion}
+                        """)
+                        if 'opp_to_convert' in st.session_state:
+                            del st.session_state['opp_to_convert']
                 except Exception as e:
                     st.error(f"❌ Error al guardar: {str(e)}")
             else:
                 st.error("⚠️ Por favor complete todos los campos obligatorios (*)")
-    
-    # Show recent sales
+
+    # Show recent sales with edit button
     st.markdown("---")
     st.markdown("### 📋 Ventas Recientes (Este Mes)")
-    
+
     today = date.today()
     month_start = date(today.year, today.month, 1)
     ventas = get_ventas_by_period(month_start, today)
-    
+
     if ventas:
         for venta in ventas:
             with st.expander(f"💰 {venta['venta_id']} | {venta['nombre']} - S/. {venta['monto_soles']:,.2f}"):
@@ -620,6 +649,9 @@ elif st.session_state['page'] == "💰 Registrar Venta":
                     st.write(f"**Fecha Cierre:** {venta['fecha_cierre']}")
                     st.write(f"**Instalación:** {venta['fecha_instalacion']}")
                     st.write(f"**Dirección:** {venta['direccion']}")
+                if st.button("✏️ Editar Venta", key=f"edit_venta_{venta['id']}"):
+                    st.session_state['venta_to_edit'] = venta
+                    st.rerun()
     else:
         st.info("No hay ventas registradas este mes.")
 
@@ -660,16 +692,35 @@ elif st.session_state['page'] == "📋 Ver Registros":
     
     with tab2:
         st.markdown("### Oportunidades")
-        
-        estado_filter = st.selectbox("Estado", ["Activas", "Todas"])
-        
-        oportunidades = get_oportunidades_activas()  # TODO: Add filter for all
-        
+
+        oportunidades = get_oportunidades_activas()
+
         if oportunidades:
-            df = pd.DataFrame(oportunidades)
-            st.dataframe(df[['fecha_contacto', 'nombre', 'tipo_negocio', 'm2_estimado', 'producto_interes']], 
-                        use_container_width=True)
-            st.info(f"📊 Total: {len(oportunidades)} oportunidades")
+            st.info(f"📊 Total: {len(oportunidades)} oportunidades activas")
+            for opp in oportunidades:
+                with st.expander(f"🎯 {opp['nombre']} ({opp['tipo_negocio']}) — {opp['m2_estimado']}m² | {opp['fecha_contacto']}"):
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.write(f"**ID:** {opp['id']}")
+                        st.write(f"**Negocio:** {opp['nombre']}")
+                        st.write(f"**Tipo:** {opp['tipo_negocio']}")
+                        st.write(f"**Dirección:** {opp.get('direccion', '')}")
+                    with col2:
+                        st.write(f"**Producto:** {opp.get('producto_interes', '')}")
+                        st.write(f"**m²:** {opp['m2_estimado']}")
+                        st.write(f"**Asignado a:** {opp.get('asignado_a', '')}")
+                        st.write(f"**Fuente:** {opp.get('source', '')}")
+                    with col3:
+                        st.write(f"**Contacto:** {opp.get('nombre_contacto', '')}")
+                        st.write(f"**Cargo:** {opp.get('cargo_contacto', '')}")
+                        st.write(f"**Celular:** {opp.get('celular_contacto', '')}")
+                        st.write(f"**Email:** {opp.get('email_contacto', '')}")
+                    st.write(f"**Siguiente acción:** {opp.get('siguiente_accion', '')}")
+                    st.write(f"**Notas:** {opp.get('notas', '')}")
+                    if st.button("✏️ Editar Oportunidad", key=f"verreg_edit_{opp['id']}"):
+                        st.session_state['opp_to_edit'] = opp
+                        st.session_state['page'] = "🎯 Registrar Oportunidad"
+                        st.rerun()
         else:
             st.info("No hay oportunidades activas.")
     

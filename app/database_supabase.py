@@ -287,6 +287,27 @@ def create_venta(venta_id: str, nombre: str, tipo_negocio: str, direccion: str,
         
     return response.data[0]['id']
 
+
+def update_venta(venta_pk: int, nombre: str, tipo_negocio: str, direccion: str,
+                 fecha_cierre: date, semana: str, m2_real: int, producto: str,
+                 monto_soles: float, fecha_instalacion=None) -> None:
+    """Update existing sale record in Supabase"""
+    supabase = init_connection()
+    business_id = get_or_create_business(nombre, tipo_negocio, direccion)
+
+    update_data = {
+        "business_id": business_id,
+        "fecha_cierre": fecha_cierre.isoformat() if hasattr(fecha_cierre, 'isoformat') else str(fecha_cierre),
+        "semana": semana,
+        "m2_real": m2_real,
+        "producto": producto,
+        "monto_soles": monto_soles,
+        "fecha_instalacion": fecha_instalacion.isoformat() if fecha_instalacion and hasattr(fecha_instalacion, 'isoformat') else (str(fecha_instalacion) if fecha_instalacion else None),
+    }
+
+    supabase.table("ventas").update(update_data).eq("id", venta_pk).execute()
+
+
 # --- Getters ---
 
 def get_visitas_by_period(start_date: date, end_date: date) -> List[Dict[str, Any]]:

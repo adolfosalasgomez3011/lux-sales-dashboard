@@ -92,26 +92,63 @@ if st.session_state['page'] == "🏠 Inicio":
     oportunidades = get_oportunidades_activas()
     ventas_semana = get_ventas_by_period(week_start, today)
     
+    # Custom CSS for the nav buttons
+    st.markdown("""
+    <style>
+    div[data-testid="stButton"] > button {
+        border-radius: 12px;
+        padding: 0.55rem 0rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        transition: opacity 0.2s;
+    }
+    div[data-testid="stButton"] > button:hover { opacity: 0.85; }
+    div.nav-btn-visitas > div[data-testid="stButton"] > button {
+        background: linear-gradient(135deg, #1a73e8, #0d47a1);
+        color: white; border: none;
+    }
+    div.nav-btn-opps > div[data-testid="stButton"] > button {
+        background: linear-gradient(135deg, #e65100, #bf360c);
+        color: white; border: none;
+    }
+    div.nav-btn-ventas > div[data-testid="stButton"] > button {
+        background: linear-gradient(135deg, #2e7d32, #1b5e20);
+        color: white; border: none;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Metrics row
     with col1:
         st.metric("✅ Visitas esta Semana", len(visitas), delta=f"{len(visitas_mes)} en el mes")
-        if st.button("📋 Ver Visitas", key="home_ver_visitas", use_container_width=True):
+    with col2:
+        st.metric("🎯 Oportunidades Activas", len(oportunidades))
+    with col3:
+        st.metric("💰 Ventas esta Semana", len(ventas_semana))
+
+    # Buttons row — separate columns so they are always perfectly aligned
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown('<div class="nav-btn-visitas">', unsafe_allow_html=True)
+        if st.button("📝 Ver Visitas →", key="home_ver_visitas", use_container_width=True):
             st.session_state['ver_registros_tab'] = 0
             st.session_state['page'] = "📋 Ver Registros"
             st.rerun()
-
+        st.markdown('</div>', unsafe_allow_html=True)
     with col2:
-        st.metric("🎯 Oportunidades Activas", len(oportunidades))
-        if st.button("📋 Ver Oportunidades", key="home_ver_opps", use_container_width=True):
+        st.markdown('<div class="nav-btn-opps">', unsafe_allow_html=True)
+        if st.button("🎯 Ver Oportunidades →", key="home_ver_opps", use_container_width=True):
             st.session_state['ver_registros_tab'] = 1
             st.session_state['page'] = "📋 Ver Registros"
             st.rerun()
-
+        st.markdown('</div>', unsafe_allow_html=True)
     with col3:
-        st.metric("💰 Ventas esta Semana", len(ventas_semana))
-        if st.button("📋 Ver Ventas", key="home_ver_ventas", use_container_width=True):
+        st.markdown('<div class="nav-btn-ventas">', unsafe_allow_html=True)
+        if st.button("💰 Ver Ventas →", key="home_ver_ventas", use_container_width=True):
             st.session_state['ver_registros_tab'] = 2
             st.session_state['page'] = "📋 Ver Registros"
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     st.markdown("### 📌 Acciones Rápidas")
@@ -705,11 +742,24 @@ elif st.session_state['page'] == "📋 Ver Registros":
             end_date = today
         
         visitas = get_visitas_by_period(start_date, end_date)
-        
+
         if visitas:
-            df = pd.DataFrame(visitas)
-            st.dataframe(df[['fecha', 'nombre', 'tipo_negocio', 'direccion', 'semana']], use_container_width=True)
             st.info(f"📊 Total: {len(visitas)} visitas")
+            for v in visitas:
+                with st.expander(f"📅 {v['fecha']} | {v['nombre']} ({v['tipo_negocio']}) — Sem {v['semana']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Negocio:** {v['nombre']}")
+                        st.write(f"**Tipo:** {v['tipo_negocio']}")
+                        st.write(f"**Fecha:** {v['fecha']}")
+                        st.write(f"**Semana:** {v['semana']}")
+                    with col2:
+                        st.write(f"**Dirección:** {v.get('direccion', '')}")
+                        st.write(f"**Notas:** {v.get('notas', '')}")
+                    if st.button("✏️ Editar Visita", key=f"verreg_visita_{v['id']}"):
+                        st.session_state['visita_to_edit'] = v
+                        st.session_state['page'] = "📝 Registrar Visita"
+                        st.rerun()
         else:
             st.info("No hay visitas en este período.")
     
@@ -767,22 +817,39 @@ elif st.session_state['page'] == "📋 Ver Registros":
             end_date = today
         
         ventas = get_ventas_by_period(start_date, end_date)
-        
+
         if ventas:
-            df = pd.DataFrame(ventas)
-            st.dataframe(df[['venta_id', 'fecha_cierre', 'nombre', 'tipo_negocio', 'm2_real', 'monto_soles']], 
-                        use_container_width=True)
-            
-            total_m2 = df['m2_real'].sum()
-            total_soles = df['monto_soles'].sum()
-            
+            import pandas as _pd
+            _df = _pd.DataFrame(ventas)
+            total_m2 = _df['m2_real'].sum()
+            total_soles = _df['monto_soles'].sum()
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("📊 Ventas", len(ventas))
             with col2:
                 st.metric("📐 m² Totales", f"{total_m2:,}")
             with col3:
-                st.metric("💰 Ingresos S/.", f"{total_soles:,.2f}")
+                st.metric("💰 Ingresos S/.", f"S/. {total_soles:,.2f}")
+            st.markdown("---")
+            for venta in ventas:
+                with st.expander(f"💰 {venta['venta_id']} | {venta['nombre']} — S/. {venta['monto_soles']:,.2f}"):
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.write(f"**ID:** {venta['venta_id']}")
+                        st.write(f"**Cliente:** {venta['nombre']}")
+                        st.write(f"**Tipo:** {venta['tipo_negocio']}")
+                    with col2:
+                        st.write(f"**Producto:** {venta.get('producto', '')}")
+                        st.write(f"**m²:** {venta['m2_real']}")
+                        st.write(f"**Monto:** S/. {venta['monto_soles']:,.2f}")
+                    with col3:
+                        st.write(f"**Fecha Cierre:** {venta['fecha_cierre']}")
+                        st.write(f"**Instalación:** {venta.get('fecha_instalacion', '')}")
+                        st.write(f"**Dirección:** {venta.get('direccion', '')}")
+                    if st.button("✏️ Editar Venta", key=f"verreg_venta_{venta['id']}"):
+                        st.session_state['venta_to_edit'] = venta
+                        st.session_state['page'] = "💰 Registrar Venta"
+                        st.rerun()
         else:
             st.info("No hay ventas en este período.")
     
